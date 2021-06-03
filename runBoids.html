@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+	<style>
+		body {
+			overflow: hidden;
+			background: black;
+		}
+		canvas {
+			border: 0.15em solid white;
+			background: black;
+			padding: 0;
+			margin: auto;
+			display: block;
+			top: 0;
+			bottom: 0;
+			left: 0;
+			right: 0;
+		}
+		label {
+			font: 1.2em "Georgia";
+			color: rgba(255, 255, 255, 0.85);
+		}
+		#ranges {
+			width: 83%;
+			margin: auto;
+		}
+		#buttons {
+			width: 32%;
+			margin: auto;
+		}
+		#addButt {
+			font: 1em "Georgia";
+		}
+	</style>
+
+	<body>
+		<canvas id="myCanvas" height="90" width="160"></canvas>
+		<script src="Boids.js" type="module" defer></script>
+
+		<br />
+		<div id="ranges">
+			<label for="animSpeed">Animation Speed:</label>
+			<input
+				type="range"
+				id="animSpeed"
+				value="1"
+				min="0"
+				max="3"
+				step="0.01"
+			/>
+
+			<span style="display: inline-block; width: 1.5em"></span>
+			<label for="boidSize">Boid Size:</label>
+			<input
+				type="range"
+				id="boidSize"
+				value="8"
+				min="1"
+				max="15"
+				step="0.01"
+			/>
+
+			<span style="display: inline-block; width: 1.5em"></span>
+			<label for="sightDist">Sight Range:</label>
+			<input
+				type="range"
+				id="sightDist"
+				value="10"
+				min="1"
+				max="25"
+				step="0.01"
+			/>
+
+			<span style="display: inline-block; width: 1.5em"></span>
+			<label for="alignFac">Alignment Factor:</label>
+			<input
+				type="range"
+				id="alignFac"
+				value="0.5"
+				min="0"
+				max="1"
+				step="0.01"
+			/>
+
+			<span style="display: inline-block; width: 1.5em"></span>
+			<label for="seperFac">Seperation Factor:</label>
+			<input
+				type="range"
+				id="seperFac"
+				value="0.5"
+				min="0"
+				max="1"
+				step="0.01"
+			/>
+
+			<span style="display: inline-block; width: 1.5em"></span>
+			<label for="cohesFac">Cohesion Factor:</label>
+			<input
+				type="range"
+				id="cohesFac"
+				value="0.5"
+				min="0"
+				max="1"
+				step="0.01"
+			/>
+
+			<span style="display: inline-block; width: 1.5em"></span>
+			<label for="linkAlpha">Link Alpha:</label>
+			<input
+				type="range"
+				id="linkAlpha"
+				value="175"
+				min="0"
+				max="255"
+				step="1"
+			/>
+		</div>
+
+		<div id="buttons">
+			<input type="checkbox" id="bounceBox" />
+			<label for="bounceBox">Boids Bounce</label>
+
+			<span style="display: inline-block; width: 1.5em"></span>
+			<input type="checkbox" id="linkBox" checked />
+			<label for="linkBox">Draw Links</label>
+
+			<span style="display: inline-block; width: 1.5em"></span>
+			<input type="button" id="addButt" value="Add 10 Boids" />
+		</div>
+	</body>
+</html>
