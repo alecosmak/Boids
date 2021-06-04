@@ -108,13 +108,25 @@ function steer(boid, delta) {
 	let totVY = 0;
 	let inSight = 0;
 
-	boids.forEach((checkBoid) => {
+	// calculate total postions and velocities
+	// boids.forEach((checkBoid) => {
+
+		for(let i = 0; i<boids.length;i++){
+
+			let checkBoid = boids[i];
+		
+
 		let dist = Math.sqrt(
 			(checkBoid.x - boid.x) * (checkBoid.x - boid.x) +
 				(checkBoid.y - boid.y) * (checkBoid.y - boid.y)
 		);
+		// let bKey1 = Math.min(boid.key, checkBoid.key);
+		// let bKey2 = Math.max(boid.key, checkBoid.key);
+		// let bIndex = 10000 * bKey1 + bKey2;
 
+		// if boid is in sight
 		if (boid != checkBoid && dist <= sight) {
+			// if boid is in link draw range
 			if (doDrawLinks && dist < 0.9 * sight && dist >= 2.5 * boidL) {
 				let linkCode =
 					stringIt(boid.x) +
@@ -123,12 +135,13 @@ function steer(boid, delta) {
 					stringIt(checkBoid.y) +
 					stringIt(dist);
 
-				// let bk1 = Math.min(boid.key, checkBoid.key);
-				// let bk2 = Math.max(boid.key, checkBoid.key);
-				// linkMap.set(stringIt(bk1) + stringIt(bk2), linkCode);
-				// outside of steer(), in drawLinks(), loop through all links in linkMap and draw them all.
+				// linkMap.set(stringIt(bKey1) + stringIt(bKey2), linkCode);
+				// links[bIndex] = linkCode;
 
 				links.push(linkCode);
+			} else {
+				// links[bIndex] = false;
+				// linkMap.set(stringIt(bKey1) + stringIt(bKey2), "out");
 			}
 
 			totX += checkBoid.x;
@@ -136,26 +149,37 @@ function steer(boid, delta) {
 			totVX += checkBoid.vx;
 			totVY += checkBoid.vy;
 			inSight++;
+		} else {
+			// links[bIndex] = false;
+			// linkMap.set(stringIt(bKey1) + stringIt(bKey2), "out");
 		}
-	});
+	
+	}
+	// });
 
-	links.forEach((link) => {
+	// draws links
+	// links.forEach((link) => {
+		for(let i = 0;i<links.length;i++){
+
 		ctx.save();
 		let alpha = Math.floor(
-			(maxLinkAlpha * (0.91 * sight - parseInt(link.substr(16, 4)))) /
+			(maxLinkAlpha * (0.91 * sight - parseInt(links[i].substr(16, 4)))) /
 				sight
 		);
 		alpha = alpha.toString(16);
 		alpha = alpha.length == 1 ? "0" + alpha : alpha;
 		ctx.strokeStyle = steerColor + alpha;
 		ctx.beginPath();
-		ctx.moveTo(parseInt(link.substr(0, 4)), parseInt(link.substr(4, 4)));
-		ctx.lineTo(parseInt(link.substr(8, 4)), parseInt(link.substr(12, 4)));
+		ctx.moveTo(parseInt(links[i].substr(0, 4)), parseInt(links[i].substr(4, 4)));
+		ctx.lineTo(parseInt(links[i].substr(8, 4)), parseInt(links[i].substr(12, 4)));
 		ctx.stroke();
 		ctx.restore();
-	});
+		}
+	
+	// });
 	links = [];
 
+	// calculate average postion and direction and steer boid
 	if (inSight > 0) {
 		totX += boid.x;
 		totY += boid.y;
@@ -200,7 +224,6 @@ function addBoid(
 	y = (height - 2 * boidL) * Math.random() + boidL
 ) {
 	let theta = 2 * Math.PI * Math.random();
-
 	boids.push({
 		x: x,
 		y: y,
@@ -214,26 +237,30 @@ function addBoid(
 
 function drawBoids() {
 	let circ = 20;
-
 	ctx.save();
 	ctx.fillStyle = "#b33";
-	boids.forEach((boid) => {
+
+	// boids.forEach((boid) => {
+		for(let i=0;i<boids.length;i++){
+
+		// draws sight circle around a few boids
 		if (doDrawSight && circ == 20) {
 			ctx.save();
 			ctx.strokeStyle = sightColor;
 			ctx.lineWidth = 4;
 			ctx.beginPath();
-			ctx.arc(boid.x, boid.y, sight, 0, 2 * Math.PI);
+			ctx.arc(boids[i].x, boids[i].y, sight, 0, 2 * Math.PI);
 			ctx.closePath();
 			ctx.stroke();
 			ctx.restore();
 		}
 		circ = mod(circ - 1, 21);
 
+		// draws boid
 		ctx.save();
-		if (boid.colTime > 0) ctx.fillStyle = "#33b"; // when bouncing
-		ctx.translate(boid.x, boid.y);
-		ctx.rotate(boid.theta - Math.PI / 2);
+		if (boids[i].colTime > 0) ctx.fillStyle = "#33b"; // when bouncing
+		ctx.translate(boids[i].x, boids[i].y);
+		ctx.rotate(boids[i].theta - Math.PI / 2);
 		ctx.beginPath();
 		ctx.moveTo(0, 1.5 * boidL);
 		ctx.lineTo(boidL, -boidL);
@@ -241,34 +268,67 @@ function drawBoids() {
 		ctx.lineTo(-boidL, -boidL);
 		ctx.fill();
 		ctx.restore();
-	});
-	ctx.restore();
+		}
+	// });
 
+	ctx.restore();
 	circ = 20;
 }
 
-function drawLinks(){
-/*
-for (let value of linkMap.values()) {
-  console.log(value)
-}
+// draws all links in map
+function drawLinks() {
+	
+	// links.forEach((link) => {
+	// 	if (link) {
+	// 		ctx.save();
+	// 		let alpha = Math.floor(
+	// 			(maxLinkAlpha * (0.91 * sight - parseInt(link.substr(16, 4)))) /
+	// 				sight
+	// 		);
+	// 		alpha = alpha.toString(16);
+	// 		alpha = alpha.length == 1 ? "0" + alpha : alpha;
+	// 		ctx.strokeStyle = steerColor + alpha;
+	// 		ctx.beginPath();
+	// 		ctx.moveTo(
+	// 			parseInt(link.substr(0, 4)),
+	// 			parseInt(link.substr(4, 4))
+	// 		);
+	// 		ctx.lineTo(
+	// 			parseInt(link.substr(8, 4)),
+	// 			parseInt(link.substr(12, 4))
+	// 		);
+	// 		ctx.stroke();
+	// 		ctx.restore();
+	// 	}
+	// });
 
-links.forEach((link) => {
-		ctx.save();
-		let alpha = Math.floor(
-			(maxLinkAlpha * (0.91 * sight - parseInt(link.substr(16, 4)))) /
-				sight
-		);
-		alpha = alpha.toString(16);
-		alpha = alpha.length == 1 ? "0" + alpha : alpha;
-		ctx.strokeStyle = steerColor + alpha;
-		ctx.beginPath();
-		ctx.moveTo(parseInt(link.substr(0, 4)), parseInt(link.substr(4, 4)));
-		ctx.lineTo(parseInt(link.substr(8, 4)), parseInt(link.substr(12, 4)));
-		ctx.stroke();
-		ctx.restore();
-	});
-*/
+
+	
+	// for (let value of linkMap.values()) {
+	// 	if (value.length == 20) {
+	// 		ctx.save();
+	// 		let alpha = Math.floor(
+	// 			(maxLinkAlpha *
+	// 				(0.91 * sight - parseInt(value.substr(16, 4)))) /
+	// 				sight
+	// 		);
+	// 		alpha = alpha.toString(16);
+	// 		alpha = alpha.length == 1 ? "0" + alpha : alpha;
+	// 		ctx.strokeStyle = steerColor + alpha;
+	// 		ctx.beginPath();
+	// 		ctx.moveTo(
+	// 			parseInt(value.substr(0, 4)),
+	// 			parseInt(value.substr(4, 4))
+	// 		);
+	// 		ctx.lineTo(
+	// 			parseInt(value.substr(8, 4)),
+	// 			parseInt(value.substr(12, 4))
+	// 		);
+	// 		ctx.stroke();
+	// 		ctx.restore();
+	// 	}
+	// }
+	
 }
 
 // makes boids bounce off edges of screen
@@ -299,23 +359,42 @@ function warpBoid(boid) {
 }
 
 function moveBoids(delta) {
-	boids.forEach((boid) => {
-		boid.x += delta * boidSpeed * boid.vx;
-		boid.y += delta * boidSpeed * boid.vy;
 
-		if (doBounce) bounceBoid(boid);
-		else warpBoid(boid);
+	for(let i =0; i<boids.length;i++){
+		boids[i].x += delta * boidSpeed * boids[i].vx;
+		boids[i].y += delta * boidSpeed * boids[i].vy;
 
-		boid.theta = mod(Math.atan2(boid.vy, boid.vx), 2 * Math.PI);
+		if (doBounce) bounceBoid(boids[i]);
+		else warpBoid(boids[i]);
 
-		if (boid.colTime > 0) {
-			boid.colTime--;
+		boids[i].theta = mod(Math.atan2(boids[i].vy, boids[i].vx), 2 * Math.PI);
+
+		if (boids[i].colTime > 0) {
+			boids[i].colTime--;
 		} else {
-			boid.colTime = 0;
+			boids[i].colTime = 0;
 		}
 
-		steer(boid, delta);
-	});
+		steer(boids[i], delta);
+	}
+
+	// boids.forEach((boid) => {
+	// 	boid.x += delta * boidSpeed * boid.vx;
+	// 	boid.y += delta * boidSpeed * boid.vy;
+
+	// 	if (doBounce) bounceBoid(boid);
+	// 	else warpBoid(boid);
+
+	// 	boid.theta = mod(Math.atan2(boid.vy, boid.vx), 2 * Math.PI);
+
+	// 	if (boid.colTime > 0) {
+	// 		boid.colTime--;
+	// 	} else {
+	// 		boid.colTime = 0;
+	// 	}
+
+	// 	steer(boid, delta);
+	// });
 }
 
 let prevTime;
@@ -326,7 +405,7 @@ function animate(timestamp) {
 	let delta = (animationSpeed * (timestamp - prevTime)) / 10.0;
 
 	moveBoids(delta);
-	drawLinks();
+	// if (doDrawLinks) drawLinks();
 	drawBoids();
 
 	prevTime = timestamp;
@@ -348,3 +427,10 @@ canvas.addEventListener("mouseUp", (event) => {
 function mod(n, m) {
 	return ((n % m) + m) % m;
 }
+
+// let ar = [11, 22, 33, 44, 55];
+// // ar[2] = 100;
+// // // ar[7] = 1;
+// let x;
+// x = x?true:false;
+// console.log(x);
