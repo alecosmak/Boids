@@ -1,26 +1,26 @@
 /* jshint -W069, esversion:6 */
-
 /** @type {HTMLCanvasElement} */
 let canvas =
 	/** @type {HTMLCanvasElement} */ document.getElementById("myCanvas");
 let ctx = canvas.getContext("2d");
-
 let height = window.innerHeight - 105;
 let width = window.innerWidth - 20;
 canvas.width = width;
 canvas.height = height;
-
-// make bottom left canvas origin
 ctx.translate(0, height);
 ctx.scale(1, -1);
 ctx.fillStyle = "purple";
 ctx.strokeStyle = "purple";
+
+// user inputs
 let animRange = document.getElementById("animSpeed");
 animRange.oninput = () => (animationSpeed = animRange.value);
 let sizeRange = document.getElementById("boidSize");
 sizeRange.oninput = () => {
 	boidL = parseFloat(sizeRange.value);
 	sight = parseFloat(sightRange.value) * boidL;
+	linkWidth = boidL / 3;
+	circLineW = boidL / 2;
 };
 sizeRange.onmousedown = () => (doDrawSight = true);
 sizeRange.onmouseup = () => (doDrawSight = false);
@@ -28,14 +28,16 @@ let sightRange = document.getElementById("sightDist");
 sightRange.oninput = () => (sight = parseFloat(sightRange.value) * boidL);
 sightRange.onmousedown = () => (doDrawSight = true);
 sightRange.onmouseup = () => (doDrawSight = false);
+let linkARange = document.getElementById("linkAlpha");
+linkARange.oninput = () => (maxLinkAlpha = parseFloat(linkARange.value));
+
 let alignRange = document.getElementById("alignFac");
 alignRange.oninput = () => (alignmentFac = parseFloat(alignRange.value));
 let seperRange = document.getElementById("seperFac");
 seperRange.oninput = () => (seperationFac = parseFloat(seperRange.value));
 let cohesRange = document.getElementById("cohesFac");
 cohesRange.oninput = () => (cohesionFac = parseFloat(cohesRange.value));
-let linkARange = document.getElementById("linkAlpha");
-linkARange.oninput = () => (maxLinkAlpha = parseFloat(linkARange.value));
+
 let bounceBox = document.getElementById("bounceBox");
 bounceBox.onclick = () => {
 	doBounce = bounceBox.checked;
@@ -53,52 +55,116 @@ addButt.onclick = () => {
 
 // game variables
 const boidSpeed = 1;
-const colTime = 20;
-const steerColor = "#cccccc";
+const colTime = 10;
+const boidColor = "#a33";
+const linkColor = "#ccccee";
 const sightColor = "#bfbd";
+const bounceColor = "#33b";
 const steerRad = 0.005;
-const startBoids = 200;
+const startBoids = 2000;
 
 let animationSpeed = 1;
-let maxLinkAlpha = 175;
 let boidL = 7;
+let linkWidth = boidL / 3;
+let circLineW = boidL / 2;
 let sight = 10 * boidL;
+let maxLinkAlpha = 150;
 let doBounce = false;
-let doDrawLinks = true;
+let doDrawLinks = false;
 let doDrawSight = false;
+let circNum = Math.ceil(startBoids / 25);
+let circTemp = circNum;
 let alignmentFac = 0.5;
 let cohesionFac = 0.4;
 let seperationFac = 0.5;
 let mouseX = -1;
 let mouseY = -1;
-let links = [];
-let linkMap = new Map();
 let boids = [];
 for (let i = 0; i < startBoids; i++) {
 	addBoid();
 }
 
-function stringIt(num) {
-	let stringNum = Math.round(num).toString();
-	let length = stringNum.length;
-	if (length < 4) {
-		stringNum = "0" + stringNum;
-		if (length < 3) {
-			stringNum = "0" + stringNum;
-			if (length < 2) {
-				stringNum = "0" + stringNum;
-				if (length < 1) {
-					stringNum = "0" + stringNum;
-				}
-			}
-		}
-	}
-	return stringNum;
+function addBoid(
+	x = (width - 4 * boidL) * Math.random() + 2 * boidL,
+	y = (height - 4 * boidL) * Math.random() + 2 * boidL
+) {
+	let theta = 2 * Math.PI * Math.random();
+	boids.push({
+		x: x,
+		y: y,
+		vx: Math.cos(theta),
+		vy: Math.sin(theta),
+		theta: theta,
+		colTime: 0,
+	});
 }
 
-function normalize([x, y]) {
-	let length = Math.sqrt(x * x + y * y);
-	return [x / length, y / length];
+function drawBoid(boid) {
+	// draws sight circle around a few boids
+	if (doDrawSight && circTemp > 0) {
+		ctx.save();
+		ctx.strokeStyle = sightColor;
+		ctx.lineWidth = circLineW;
+		ctx.beginPath();
+		ctx.arc(boid.x, boid.y, sight, 0, 2 * Math.PI);
+		ctx.stroke();
+		ctx.restore();
+		circTemp--;
+	}
+
+	// draws boid
+	ctx.save();
+	ctx.fillStyle = boidColor;
+	// if boids bounce off walls
+	if (boid.colTime > 0) ctx.fillStyle = bounceColor;
+	ctx.translate(boid.x, boid.y);
+	ctx.rotate(boid.theta - Math.PI / 2);
+	ctx.beginPath();
+	ctx.moveTo(0, 1.5 * boidL);
+	ctx.lineTo(boidL, -boidL);
+	ctx.lineTo(0, -boidL / 1.7);
+	ctx.lineTo(-boidL, -boidL);
+	ctx.fill();
+	ctx.restore();
+}
+function drawLink(boid1, boid2, dist) {
+	ctx.save();
+	// links fade if long
+	let alpha = Math.floor((maxLinkAlpha * (0.91 * sight - dist)) / sight);
+	alpha = alpha.toString(16);
+	alpha = alpha.length == 1 ? "0" + alpha : alpha;
+	ctx.strokeStyle = linkColor + alpha;
+	ctx.lineWidth = linkWidth;
+	ctx.beginPath();
+	ctx.moveTo(boid1.x, boid1.y);
+	ctx.lineTo(boid2.x, boid2.y);
+	ctx.stroke();
+	ctx.restore();
+}
+
+// makes boids bounce off edges of screen
+function bounceBoid(boid) {
+	// left and right
+	if (boid.x <= 0) {
+		boid.vx *= boid.vx < 0 ? -1 : 1;
+		boid.colTime = colTime;
+	} else if (boid.x >= width) {
+		boid.vx *= boid.vx > 0 ? -1 : 1;
+		boid.colTime = colTime;
+	}
+	// top and bottom
+	if (boid.y <= 0) {
+		boid.vy *= boid.vy < 0 ? -1 : 1;
+		boid.colTime = colTime;
+	} else if (boid.y >= height) {
+		boid.vy *= boid.vy > 0 ? -1 : 1;
+		boid.colTime = colTime;
+	}
+}
+// makes boids warp to other side of screen if it crosses screen edge
+function warpBoid(boid) {
+	boid.x = mod(boid.x, width);
+	boid.y = mod(boid.y, height);
 }
 
 function steer(boid, delta) {
@@ -109,39 +175,18 @@ function steer(boid, delta) {
 	let inSight = 0;
 
 	// calculate total postions and velocities
-	// boids.forEach((checkBoid) => {
-
-		for(let i = 0; i<boids.length;i++){
-
-			let checkBoid = boids[i];
-		
-
+	for (let i = 0; i < boids.length; i++) {
+		let checkBoid = boids[i];
 		let dist = Math.sqrt(
 			(checkBoid.x - boid.x) * (checkBoid.x - boid.x) +
 				(checkBoid.y - boid.y) * (checkBoid.y - boid.y)
 		);
-		// let bKey1 = Math.min(boid.key, checkBoid.key);
-		// let bKey2 = Math.max(boid.key, checkBoid.key);
-		// let bIndex = 10000 * bKey1 + bKey2;
 
 		// if boid is in sight
 		if (boid != checkBoid && dist <= sight) {
 			// if boid is in link draw range
 			if (doDrawLinks && dist < 0.9 * sight && dist >= 2.5 * boidL) {
-				let linkCode =
-					stringIt(boid.x) +
-					stringIt(boid.y) +
-					stringIt(checkBoid.x) +
-					stringIt(checkBoid.y) +
-					stringIt(dist);
-
-				// linkMap.set(stringIt(bKey1) + stringIt(bKey2), linkCode);
-				// links[bIndex] = linkCode;
-
-				links.push(linkCode);
-			} else {
-				// links[bIndex] = false;
-				// linkMap.set(stringIt(bKey1) + stringIt(bKey2), "out");
+				drawLink(boid, checkBoid, dist);
 			}
 
 			totX += checkBoid.x;
@@ -149,35 +194,10 @@ function steer(boid, delta) {
 			totVX += checkBoid.vx;
 			totVY += checkBoid.vy;
 			inSight++;
-		} else {
-			// links[bIndex] = false;
-			// linkMap.set(stringIt(bKey1) + stringIt(bKey2), "out");
 		}
-	
 	}
-	// });
 
-	// draws links
-	// links.forEach((link) => {
-		for(let i = 0;i<links.length;i++){
-
-		ctx.save();
-		let alpha = Math.floor(
-			(maxLinkAlpha * (0.91 * sight - parseInt(links[i].substr(16, 4)))) /
-				sight
-		);
-		alpha = alpha.toString(16);
-		alpha = alpha.length == 1 ? "0" + alpha : alpha;
-		ctx.strokeStyle = steerColor + alpha;
-		ctx.beginPath();
-		ctx.moveTo(parseInt(links[i].substr(0, 4)), parseInt(links[i].substr(4, 4)));
-		ctx.lineTo(parseInt(links[i].substr(8, 4)), parseInt(links[i].substr(12, 4)));
-		ctx.stroke();
-		ctx.restore();
-		}
-	
-	// });
-	links = [];
+	drawBoid(boid);
 
 	// calculate average postion and direction and steer boid
 	if (inSight > 0) {
@@ -219,148 +239,8 @@ function steer(boid, delta) {
 	}
 }
 
-function addBoid(
-	x = (width - 2 * boidL) * Math.random() + boidL,
-	y = (height - 2 * boidL) * Math.random() + boidL
-) {
-	let theta = 2 * Math.PI * Math.random();
-	boids.push({
-		x: x,
-		y: y,
-		vx: Math.cos(theta),
-		vy: Math.sin(theta),
-		theta: theta,
-		colTime: 0,
-		key: boids.length + 1,
-	});
-}
-
-function drawBoids() {
-	let circ = 20;
-	ctx.save();
-	ctx.fillStyle = "#b33";
-
-	// boids.forEach((boid) => {
-		for(let i=0;i<boids.length;i++){
-
-		// draws sight circle around a few boids
-		if (doDrawSight && circ == 20) {
-			ctx.save();
-			ctx.strokeStyle = sightColor;
-			ctx.lineWidth = 4;
-			ctx.beginPath();
-			ctx.arc(boids[i].x, boids[i].y, sight, 0, 2 * Math.PI);
-			ctx.closePath();
-			ctx.stroke();
-			ctx.restore();
-		}
-		circ = mod(circ - 1, 21);
-
-		// draws boid
-		ctx.save();
-		if (boids[i].colTime > 0) ctx.fillStyle = "#33b"; // when bouncing
-		ctx.translate(boids[i].x, boids[i].y);
-		ctx.rotate(boids[i].theta - Math.PI / 2);
-		ctx.beginPath();
-		ctx.moveTo(0, 1.5 * boidL);
-		ctx.lineTo(boidL, -boidL);
-		ctx.lineTo(0, -boidL / 1.7);
-		ctx.lineTo(-boidL, -boidL);
-		ctx.fill();
-		ctx.restore();
-		}
-	// });
-
-	ctx.restore();
-	circ = 20;
-}
-
-// draws all links in map
-function drawLinks() {
-	
-	// links.forEach((link) => {
-	// 	if (link) {
-	// 		ctx.save();
-	// 		let alpha = Math.floor(
-	// 			(maxLinkAlpha * (0.91 * sight - parseInt(link.substr(16, 4)))) /
-	// 				sight
-	// 		);
-	// 		alpha = alpha.toString(16);
-	// 		alpha = alpha.length == 1 ? "0" + alpha : alpha;
-	// 		ctx.strokeStyle = steerColor + alpha;
-	// 		ctx.beginPath();
-	// 		ctx.moveTo(
-	// 			parseInt(link.substr(0, 4)),
-	// 			parseInt(link.substr(4, 4))
-	// 		);
-	// 		ctx.lineTo(
-	// 			parseInt(link.substr(8, 4)),
-	// 			parseInt(link.substr(12, 4))
-	// 		);
-	// 		ctx.stroke();
-	// 		ctx.restore();
-	// 	}
-	// });
-
-
-	
-	// for (let value of linkMap.values()) {
-	// 	if (value.length == 20) {
-	// 		ctx.save();
-	// 		let alpha = Math.floor(
-	// 			(maxLinkAlpha *
-	// 				(0.91 * sight - parseInt(value.substr(16, 4)))) /
-	// 				sight
-	// 		);
-	// 		alpha = alpha.toString(16);
-	// 		alpha = alpha.length == 1 ? "0" + alpha : alpha;
-	// 		ctx.strokeStyle = steerColor + alpha;
-	// 		ctx.beginPath();
-	// 		ctx.moveTo(
-	// 			parseInt(value.substr(0, 4)),
-	// 			parseInt(value.substr(4, 4))
-	// 		);
-	// 		ctx.lineTo(
-	// 			parseInt(value.substr(8, 4)),
-	// 			parseInt(value.substr(12, 4))
-	// 		);
-	// 		ctx.stroke();
-	// 		ctx.restore();
-	// 	}
-	// }
-	
-}
-
-// makes boids bounce off edges of screen
-function bounceBoid(boid) {
-	// left and right
-	if (boid.x <= 0) {
-		boid.vx *= boid.vx < 0 ? -1 : 1;
-		boid.colTime = colTime;
-	} else if (boid.x >= width) {
-		boid.vx *= boid.vx > 0 ? -1 : 1;
-		boid.colTime = colTime;
-	}
-
-	// top and bottom
-	if (boid.y <= 0) {
-		boid.vy *= boid.vy < 0 ? -1 : 1;
-		boid.colTime = colTime;
-	} else if (boid.y >= height) {
-		boid.vy *= boid.vy > 0 ? -1 : 1;
-		boid.colTime = colTime;
-	}
-}
-
-// makes boids warp to other side of screen if it crosses screen edge
-function warpBoid(boid) {
-	boid.x = mod(boid.x, width);
-	boid.y = mod(boid.y, height);
-}
-
 function moveBoids(delta) {
-
-	for(let i =0; i<boids.length;i++){
+	for (let i = 0; i < boids.length; i++) {
 		boids[i].x += delta * boidSpeed * boids[i].vx;
 		boids[i].y += delta * boidSpeed * boids[i].vy;
 
@@ -377,24 +257,6 @@ function moveBoids(delta) {
 
 		steer(boids[i], delta);
 	}
-
-	// boids.forEach((boid) => {
-	// 	boid.x += delta * boidSpeed * boid.vx;
-	// 	boid.y += delta * boidSpeed * boid.vy;
-
-	// 	if (doBounce) bounceBoid(boid);
-	// 	else warpBoid(boid);
-
-	// 	boid.theta = mod(Math.atan2(boid.vy, boid.vx), 2 * Math.PI);
-
-	// 	if (boid.colTime > 0) {
-	// 		boid.colTime--;
-	// 	} else {
-	// 		boid.colTime = 0;
-	// 	}
-
-	// 	steer(boid, delta);
-	// });
 }
 
 let prevTime;
@@ -405,13 +267,20 @@ function animate(timestamp) {
 	let delta = (animationSpeed * (timestamp - prevTime)) / 10.0;
 
 	moveBoids(delta);
-	// if (doDrawLinks) drawLinks();
-	drawBoids();
+	circTemp = circNum;
 
 	prevTime = timestamp;
 	window.requestAnimationFrame(animate);
 }
 animate();
+
+function mod(n, m) {
+	return ((n % m) + m) % m;
+}
+function normalize([x, y]) {
+	let length = Math.sqrt(x * x + y * y);
+	return [x / length, y / length];
+}
 
 canvas.addEventListener("mousedown", (event) => {
 	mouseX = event.clientX - event.target.getBoundingClientRect().left;
@@ -423,14 +292,3 @@ canvas.addEventListener("mouseUp", (event) => {
 	mouseX = -1;
 	mouseY = -1;
 });
-
-function mod(n, m) {
-	return ((n % m) + m) % m;
-}
-
-// let ar = [11, 22, 33, 44, 55];
-// // ar[2] = 100;
-// // // ar[7] = 1;
-// let x;
-// x = x?true:false;
-// console.log(x);
